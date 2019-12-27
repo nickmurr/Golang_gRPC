@@ -5,8 +5,8 @@ package calculator;
 option go_package = "calculatorpb";
 
 message Nums {
-    int64 firstNum = 1;
-    int64 secondNum = 2;
+    int32 firstNum = 1;
+    int32 secondNum = 2;
 }
 
 message SumRequest {
@@ -14,10 +14,21 @@ message SumRequest {
 }
 
 message SumResponse {
-    int64 result = 1;
+    int32 result = 1;
+}
+
+message PrimeNumberDecompositionRequest {
+    int32 num = 1;
+}
+
+message PrimeNumberDecompositionResponse {
+    int32 result = 1;
 }
 
 service SumService {
     rpc Sum (SumRequest) returns (SumResponse) {
+    };
+
+    rpc PrimeNumberDecomposition (PrimeNumberDecompositionRequest) returns (stream PrimeNumberDecompositionResponse) {
     };
 }
