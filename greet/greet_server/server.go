@@ -13,6 +13,9 @@ import (
 type server struct{}
 
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
+
+	fmt.Printf("Greet function was invoked with %v\n", req)
+
 	firstName := req.GetGreeting().GetFirstName()
 	lastName := req.GetGreeting().GetLastName()
 	result := fmt.Sprintf("Hello %s %s", firstName, lastName)
@@ -25,7 +28,6 @@ func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.G
 }
 
 func main() {
-	fmt.Println("Hello world")
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
@@ -36,7 +38,9 @@ func main() {
 
 	greetpb.RegisterGreetServiceServer(s, &server{})
 
+	fmt.Println("Server is running on port :50051")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
+
 }
