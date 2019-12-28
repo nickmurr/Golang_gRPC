@@ -13,13 +13,14 @@ import (
 type server struct{}
 
 func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositionRequest, stream calculatorpb.SumService_PrimeNumberDecompositionServer) error {
+	start := time.Now()
+	defer log.Printf("It took %v", time.Since(start))
+
 	var factor int32 = 2
 	num := req.GetNum()
-
 	for num > 1 {
 		if num%factor == 0 {
-			fmt.Println(factor)
-			num = num / factor
+			fmt.Println("Divisor =", factor)
 			res := &calculatorpb.PrimeNumberDecompositionResponse{
 				Result: factor,
 			}
@@ -27,12 +28,12 @@ func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositi
 			if err != nil {
 				log.Fatalf("Error: %v", err)
 			}
-			time.Sleep(1 * time.Second)
+			num /= factor
 		} else {
-			factor += 1
+			factor++
+			// fmt.Printf("Divisor was increased to %v\n", factor)
 		}
 	}
-
 	return nil
 }
 
