@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go_grpc_server/calculator/calculator_client/primeNumber"
+	"go_grpc_server/calculator/calculator_client/computeAverage"
 	"go_grpc_server/calculator/calculatorpb"
 	"google.golang.org/grpc"
 	"log"
@@ -20,13 +20,16 @@ func main() {
 
 	c := calculatorpb.NewSumServiceClient(cc)
 
-	/* SUM */
+	/* 1. SUM */
 	// newChannel := make(chan int32)
 	// for {
 	// 	go sum.Sum(c, newChannel)
 	// 	fmt.Printf("Sum = %v\n\n", <-newChannel)
 	// }
 
-	/* Prime NUMBER */
-	primeNumber.PrimeNumber(c)
+	/* 2. Prime NUMBER */
+	// primeNumber.PrimeNumber(c)
+
+	/* 3. Compute Average */
+	computeAverage.Average(c)
 }

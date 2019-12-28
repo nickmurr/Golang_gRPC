@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go_grpc_server/calculator/calculatorpb"
 	"google.golang.org/grpc"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -12,6 +13,19 @@ import (
 
 type server struct{}
 
+// Unary
+func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculatorpb.SumResponse, error) {
+	fmt.Printf("Greet function was invoked with %v\n", req)
+	nums := req.GetNums()
+
+	res := &calculatorpb.SumResponse{
+		Result: nums.FirstNum + nums.SecondNum,
+	}
+
+	return res, nil
+}
+
+// Server Streaming
 func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositionRequest, stream calculatorpb.SumService_PrimeNumberDecompositionServer) error {
 	start := time.Now()
 	defer log.Printf("It took %v", time.Since(start))
@@ -37,15 +51,29 @@ func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositi
 	return nil
 }
 
-func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculatorpb.SumResponse, error) {
-	fmt.Printf("Greet function was invoked with %v\n", req)
-	nums := req.GetNums()
+// Client Streaming
+func (*server) ComputeAverage(stream calculatorpb.SumService_ComputeAverageServer) error {
+	fmt.Printf("ComputeAverage function was invoked\n")
 
-	res := &calculatorpb.SumResponse{
-		Result: nums.FirstNum + nums.SecondNum,
+	index := float32(0)
+	result := float32(0)
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			// 	we have finished reading client stream
+			return stream.SendAndClose(&calculatorpb.ComputeAverageResponse{
+				Result: result / index,
+			})
+		}
+		if err != nil {
+			log.Fatalf("Error while reading client stream: %v", err)
+		}
+		index += 1
+		result += float32(req.Num)
 	}
 
-	return res, nil
+	return nil
 }
 
 func main() {
