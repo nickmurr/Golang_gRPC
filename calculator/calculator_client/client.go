@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go_grpc_server/calculator/calculator_client/computeAverage"
+	"go_grpc_server/calculator/calculator_client/findMaximum"
 	"go_grpc_server/calculator/calculatorpb"
 	"google.golang.org/grpc"
 	"log"
@@ -31,5 +31,8 @@ func main() {
 	// primeNumber.PrimeNumber(c)
 
 	/* 3. Compute Average */
-	computeAverage.Average(c)
+	// computeAverage.Average(c)
+
+	/* 4.Find Maximum */
+	findMaximum.FindMaximum(c)
 }
