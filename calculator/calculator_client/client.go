@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go_grpc_server/calculator/calculator_client/findMaximum"
+	"go_grpc_server/calculator/calculator_client/squreRoot"
 	"go_grpc_server/calculator/calculatorpb"
 	"google.golang.org/grpc"
 	"log"
@@ -34,5 +34,8 @@ func main() {
 	// computeAverage.Average(c)
 
 	/* 4.Find Maximum */
-	findMaximum.FindMaximum(c)
+	// findMaximum.FindMaximum(c)
+
+	/* 5. Square Root*/
+	squreRoot.SquareRoot(c)
 }
