@@ -3,14 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"go_grpc_server/calculator/calculatorpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"math"
 	"net"
+	"net/http"
 	"time"
 )
 
@@ -18,14 +22,19 @@ type server struct{}
 
 // Unary
 func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculatorpb.SumResponse, error) {
-	fmt.Printf("Greet function was invoked with %v\n", req)
+	_ = grpc.SendHeader(ctx, metadata.Pairs("Pre-Response-Metadata", "Is-sent-as-headers-unary"))
+	_ = grpc.SetTrailer(ctx, metadata.Pairs("Post-Response-Metadata", "Is-sent-as-trailers-unary"))
+	fmt.Printf("Sum function was invoked with %v\n", req)
 	nums := req.GetNums()
+	if nums != nil {
 
 	res := &calculatorpb.SumResponse{
 		Result: nums.FirstNum + nums.SecondNum,
 	}
 
 	return res, nil
+	}
+	return nil, nil
 }
 
 // Server Streaming
@@ -130,8 +139,36 @@ func main() {
 
 	calculatorpb.RegisterSumServiceServer(s, &server{})
 
+	waitc := make(chan struct{})
+	go func() {
+		wrappedServer := grpcweb.WrapServer(s, grpcweb.WithWebsockets(true))
+		handler := func(resp http.ResponseWriter, req *http.Request) {
+			enableCors(&resp)
+
+			wrappedServer.ServeHTTP(resp, req)
+		}
+
+		httpServer := http.Server{
+			Addr:    fmt.Sprintf(":%d", 50052),
+			Handler: http.HandlerFunc(handler),
+		}
+		fmt.Println("Http server is running")
+		if err := httpServer.ListenAndServeTLS("./calculator/cert/server.crt","./calculator/cert/server.key"); err != nil {
+			grpclog.Fatalf("failed starting http server: %v", err)
+			close(waitc)
+			<-waitc
+		}
+	}()
+
 	fmt.Println("Server is running on port :50051")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
+
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization,x-grpc-web")
 }
