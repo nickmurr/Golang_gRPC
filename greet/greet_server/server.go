@@ -14,6 +14,10 @@ import (
 
 type server struct{}
 
+func (*server) GreetWithDeadline(context.Context, *greetpb.GreetWithDeadlineRequest) (*greetpb.GreetWithDeadlineResponse, error) {
+	panic("implement me")
+}
+
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
 
 	fmt.Printf("Greet function was invoked with %v\n", req)
@@ -96,8 +100,6 @@ func (*server) GreetEveryone(stream greetpb.GreetService_GreetEveryoneServer) er
 			return sendErr
 		}
 	}
-
-	return nil
 }
 
 func main() {

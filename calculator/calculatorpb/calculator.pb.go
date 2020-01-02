@@ -526,6 +526,9 @@ type SumServiceClient interface {
 	PrimeNumberDecomposition(ctx context.Context, in *PrimeNumberDecompositionRequest, opts ...grpc.CallOption) (SumService_PrimeNumberDecompositionClient, error)
 	ComputeAverage(ctx context.Context, opts ...grpc.CallOption) (SumService_ComputeAverageClient, error)
 	FindMaximum(ctx context.Context, opts ...grpc.CallOption) (SumService_FindMaximumClient, error)
+	//    error handling
+	//    this RPC will throw an exception if the sent number is negative
+	//    The error being sent is of type INVALID_ARGUMENT
 	SquareRoot(ctx context.Context, in *SquareRootRequest, opts ...grpc.CallOption) (*SquareRootResponse, error)
 }
 
@@ -658,6 +661,9 @@ type SumServiceServer interface {
 	PrimeNumberDecomposition(*PrimeNumberDecompositionRequest, SumService_PrimeNumberDecompositionServer) error
 	ComputeAverage(SumService_ComputeAverageServer) error
 	FindMaximum(SumService_FindMaximumServer) error
+	//    error handling
+	//    this RPC will throw an exception if the sent number is negative
+	//    The error being sent is of type INVALID_ARGUMENT
 	SquareRoot(context.Context, *SquareRootRequest) (*SquareRootResponse, error)
 }
 

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"flag"
 	"fmt"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"go_grpc_server/calculator/calculatorpb"
@@ -22,17 +24,17 @@ type server struct{}
 
 // Unary
 func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculatorpb.SumResponse, error) {
-	_ = grpc.SendHeader(ctx, metadata.Pairs("Pre-Response-Metadata", "Is-sent-as-headers-unary"))
-	_ = grpc.SetTrailer(ctx, metadata.Pairs("Post-Response-Metadata", "Is-sent-as-trailers-unary"))
-	fmt.Printf("Sum function was invoked with %v\n", req)
-	nums := req.GetNums()
-	if nums != nil {
+_ = grpc.SendHeader(ctx, metadata.Pairs("Pre-Response-Metadata", "Is-sent-as-headers-unary"))
+_ = grpc.SetTrailer(ctx, metadata.Pairs("Post-Response-Metadata", "Is-sent-as-trailers-unary"))
+fmt.Printf("Sum function was invoked with %v\n", req)
+nums := req.GetNums()
+if nums != nil {
 
-	res := &calculatorpb.SumResponse{
-		Result: nums.FirstNum + nums.SecondNum,
-	}
+res := &calculatorpb.SumResponse{
+Result: nums.FirstNum + nums.SecondNum,
+}
 
-	return res, nil
+		return res, nil
 	}
 	return nil, nil
 }
@@ -100,6 +102,7 @@ func (*server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) err
 			log.Fatalf("Error while making request: %v", err)
 		}
 		number := request.GetNum()
+		fmt.Println(number)
 		if number > max {
 			max = number
 			sendErr := stream.Send(&calculatorpb.FindMaximumResponse{Result: max})
@@ -107,7 +110,6 @@ func (*server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) err
 				log.Fatalf("Error while sending stream %v", err)
 				return err
 			}
-
 		}
 	}
 
@@ -129,39 +131,67 @@ func (*server) SquareRoot(ctx context.Context, req *calculatorpb.SquareRootReque
 	}, nil
 }
 
+var (
+	http1Port       = flag.Int("http1_port", 9090, "Port to listen with HTTP1.1 with TLS on.")
+	http2Port       = flag.Int("http2_port", 50052, "Port to listen with HTTP2 with TLS on.")
+	tlsCertFilePath = flag.String("tls_cert_file", "./calculator/cert/server.crt", "Path to the CRT/PEM file.")
+	tlsKeyFilePath  = flag.String("tls_key_file", "./calculator/cert/server.key", "Path to the private key file.")
+)
+
 func main() {
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	grpcServer := grpc.NewServer()
 
-	calculatorpb.RegisterSumServiceServer(s, &server{})
+	calculatorpb.RegisterSumServiceServer(grpcServer, &server{})
 
-	waitc := make(chan struct{})
+	websocketOriginFunc := grpcweb.WithWebsocketOriginFunc(func(req *http.Request) bool {
+		return true
+	})
+	httpOriginFunc := grpcweb.WithOriginFunc(func(origin string) bool {
+		return true
+	})
+
+	wrappedServer := grpcweb.WrapServer(
+		grpcServer,
+		grpcweb.WithWebsockets(true),
+		httpOriginFunc,
+		websocketOriginFunc,
+	)
+	handler := func(resp http.ResponseWriter, req *http.Request) {
+		wrappedServer.ServeHTTP(resp, req)
+	}
+
+	http1Server := http.Server{
+		Addr:    fmt.Sprintf(":%d", *http1Port),
+		Handler: http.HandlerFunc(handler),
+	}
+	http1Server.TLSNextProto = map[string]func(*http.Server, *tls.Conn, http.Handler){} // Disable HTTP2
+
+	http2Server := http.Server{
+		Addr:    fmt.Sprintf(":%d", *http2Port),
+		Handler: http.HandlerFunc(handler),
+	}
+
 	go func() {
-		wrappedServer := grpcweb.WrapServer(s, grpcweb.WithWebsockets(true))
-		handler := func(resp http.ResponseWriter, req *http.Request) {
-			enableCors(&resp)
-
-			wrappedServer.ServeHTTP(resp, req)
+		fmt.Println("Run http:1.1 server")
+		if err := http1Server.ListenAndServe(); err != nil {
+			grpclog.Fatalf("failed starting http1.1 server: %v", err)
 		}
+	}()
 
-		httpServer := http.Server{
-			Addr:    fmt.Sprintf(":%d", 50052),
-			Handler: http.HandlerFunc(handler),
-		}
-		fmt.Println("Http server is running")
-		if err := httpServer.ListenAndServeTLS("./calculator/cert/server.crt","./calculator/cert/server.key"); err != nil {
-			grpclog.Fatalf("failed starting http server: %v", err)
-			close(waitc)
-			<-waitc
+	go func() {
+		fmt.Println("Run http:2.0 server")
+		if err := http2Server.ListenAndServeTLS(*tlsCertFilePath, *tlsKeyFilePath); err != nil {
+			grpclog.Fatalf("failed starting http2 server: %v", err)
 		}
 	}()
 
 	fmt.Println("Server is running on port :50051")
-	if err := s.Serve(lis); err != nil {
+	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 

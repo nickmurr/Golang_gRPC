@@ -28,20 +28,6 @@ func Average(c calculatorpb.SumServiceClient) {
 	}
 	fmt.Println(numArray)
 
-	// reqests := []*calculatorpb.ComputeAverageRequest{
-	// 	&calculatorpb.ComputeAverageRequest{
-	// 		Num: 1,
-	// 	},
-	// 	&calculatorpb.ComputeAverageRequest{
-	// 		Num: 2,
-	// 	},
-	// 	&calculatorpb.ComputeAverageRequest{
-	// 		Num: 3,
-	// 	},
-	// 	&calculatorpb.ComputeAverageRequest{
-	// 		Num: 4,
-	// 	},
-	// }
 
 	stream, err := c.ComputeAverage(context.Background())
 	if err != nil {
