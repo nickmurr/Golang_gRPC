@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	crudserver "go_grpc_server/blog/blog_server/crud"
 
@@ -97,6 +98,7 @@ func main() {
 
 	go func() {
 		fmt.Println("Run http:2.0 server")
+		// if err := http2Server.ListenAndServe(); err != nil {
 		if err := http2Server.ListenAndServeTLS(*tlsCertFilePath, *tlsKeyFilePath); err != nil {
 			grpclog.Fatalf("failed starting http2 server: %v", err)
 		}
@@ -106,6 +108,13 @@ func main() {
 		fmt.Println("Start TCP Server is running on port :50051")
 		if err := grpcServer.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
+		}
+	}()
+
+	go func() {
+		err := muxServer()
+		if err != nil {
+			log.Fatalf("Error: %v",err)
 		}
 	}()
 
@@ -123,4 +132,28 @@ func main() {
 	fmt.Println("Closing mongodb Connection")
 	_ = client.Disconnect(context.TODO())
 	fmt.Println("End of Program")
+}
+
+var (
+	// command-line options:
+	// gRPC server endpoint
+	grpcServerEndpoint = flag.String("grpc-server-endpoint", "localhost:50051", "gRPC server endpoint")
+)
+
+func muxServer() error {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Register gRPC server endpoint
+	// Note: Make sure the gRPC server is running properly and accessible
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	err := blogpb.RegisterBlogServiceHandlerFromEndpoint(ctx, mux, *grpcServerEndpoint, opts)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Running mux")
+	// Start HTTP server (and proxy calls to gRPC server endpoint)
+	return http.ListenAndServeTLS(":8081", *tlsCertFilePath, *tlsKeyFilePath, mux)
 }

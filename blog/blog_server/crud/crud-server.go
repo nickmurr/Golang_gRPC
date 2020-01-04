@@ -87,12 +87,11 @@ func (CrudServer) ReadBlog(ctx context.Context, req *blogpb.ReadBlogRequest) (*b
 func (CrudServer) ReadAllBlog(ctx context.Context, req *blogpb.ReadAllBlogRequest) (*blogpb.ReadAllBlogResponse, error) {
 	blogPage := req.GetPage()
 	blogSearch := req.GetSearch()
+	fmt.Println(req.GetPage(), req.GetSearch())
 
 	if blogPage < 0 || blogPage == 0 {
-		blogPage = 0
+		blogPage = 1
 	}
-
-	//
 
 	skip := int64((blogPage - 1) * 10)
 	limit := int64(10)
@@ -108,7 +107,7 @@ func (CrudServer) ReadAllBlog(ctx context.Context, req *blogpb.ReadAllBlogReques
 
 	var data []*blogpb.Blog
 
-	filter := bson.M{"title": primitive.Regex{Pattern: blogSearch}}
+	filter := bson.M{"title": primitive.Regex{Pattern: blogSearch, Options: "i"}}
 
 	blogItem, err := Collection.Find(context.Background(), filter, findOptions)
 	countDocuments, err := Collection.CountDocuments(context.Background(), filter, &countOptions)

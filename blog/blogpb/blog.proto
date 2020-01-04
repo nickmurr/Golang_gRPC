@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package blog;
 
+import "google/api/annotations.proto";
+
 option go_package = "blogpb";
 
 message Blog {
@@ -44,5 +46,8 @@ service BlogService {
     }; // return notFound
 
     rpc ReadAllBlog (ReadAllBlogRequest) returns (ReadAllBlogResponse) {
+        option (google.api.http) = {
+              get: "/v1/example/echo/{search}"
+        };
     };
 }
