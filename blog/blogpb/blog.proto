@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package blog;
+
+option go_package = "blogpb";
+
+message Blog {
+    string id = 1;
+    string author = 2;
+    string title = 3;
+    string content = 4;
+}
+
+message CreateBlogRequest {
+    Blog blog = 1;
+}
+
+message CreateBlogResponse {
+    Blog blog = 1;
+}
+
+message ReadBlogRequest {
+    string blog_id = 1;
+}
+
+message ReadBlogResponse {
+    Blog blog = 1;
+}
+
+message ReadAllBlogRequest {
+    string search = 1;
+    int32 page = 2;
+}
+
+message ReadAllBlogResponse {
+    repeated Blog blog = 1;
+}
+
+service BlogService {
+    rpc CreateBlog (CreateBlogRequest) returns (CreateBlogResponse) {
+    };
+
+    rpc ReadBlog (ReadBlogRequest) returns (ReadBlogResponse) {
+    }; // return notFound
+
+    rpc ReadAllBlog (ReadAllBlogRequest) returns (ReadAllBlogResponse) {
+    };
+}

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"go_grpc_server/greet/greetpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"time"
@@ -12,7 +15,15 @@ import (
 
 func main() {
 	fmt.Println("Hello, i'm a client")
-	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	certFile := "./ssl/ca.crt"
+	certKey := "ssl/ca.key"
+
+	creed, sslErr := credentials.NewClientTLSFromFile(certFile, certKey)
+	if sslErr != nil {
+		log.Fatalf("Failed loading certificates %v", sslErr)
+		return
+	}
+	cc, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(creed))
 
 	if err != nil {
 		log.Fatalf("Could not connect: %v", err)
@@ -22,10 +33,13 @@ func main() {
 
 	c := greetpb.NewGreetServiceClient(cc)
 
-	// doUnary(c)
+	doUnary(c)
 	// doServerStreaming(c)
 	// doClientStreaming(c)
-	doBiDiStreaming(c)
+	// doBiDiStreaming(c)
+
+	// doUnaryWithDeadline(c, 5*time.Second) // should complete
+	// doUnaryWithDeadline(c, 1*time.Second)
 }
 
 func doUnary(c greetpb.GreetServiceClient) {
@@ -199,4 +213,36 @@ func doBiDiStreaming(c greetpb.GreetServiceClient) {
 
 	// block until everything is done
 	<-waitc
+}
+
+func doUnaryWithDeadline(c greetpb.GreetServiceClient, timeout time.Duration) {
+	fmt.Println("Starting to do unaryWithDeadline RPC")
+
+	req := &greetpb.GreetWithDeadlineRequest{
+		Greeting: &greetpb.Greeting{
+			FirstName: "Niko",
+			LastName:  "Muraviov",
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	res, err := c.GreetWithDeadline(ctx, req)
+	if err != nil {
+
+		statusErr, ok := status.FromError(err)
+		if ok {
+			if statusErr.Code() == codes.DeadlineExceeded {
+				fmt.Println("Timeout was hit! Deadline was exceeded")
+			} else {
+				fmt.Printf("Unexpected error: %v\n", statusErr)
+			}
+		} else {
+			log.Fatalf("Error while calling GreetWithDeadlineRequest RPC: %v", statusErr)
+		}
+		return
+	}
+
+	log.Printf("Response from Greet: %v", res.Result)
 }

@@ -4,6 +4,11 @@ import (
 	"context"
 	"fmt"
 	"go_grpc_server/greet/greetpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"io"
 	"log"
 	"net"
@@ -14,8 +19,25 @@ import (
 
 type server struct{}
 
-func (*server) GreetWithDeadline(context.Context, *greetpb.GreetWithDeadlineRequest) (*greetpb.GreetWithDeadlineResponse, error) {
-	panic("implement me")
+func (*server) GreetWithDeadline(ctx context.Context, req *greetpb.GreetWithDeadlineRequest) (*greetpb.GreetWithDeadlineResponse, error) {
+	fmt.Printf("GreetWithDeadline was invoked with %v\n", req)
+
+	for i := 0; i < 3; i++ {
+		if ctx.Err() == context.Canceled {
+			// 	client cancelled the request
+			fmt.Println("client cancelled the request!")
+			return nil, status.Error(codes.Canceled, "The client cancelled the request")
+		}
+		time.Sleep(time.Second)
+	}
+
+	firstName := req.GetGreeting().FirstName
+	result := "Hello " + firstName
+	res := &greetpb.GreetWithDeadlineResponse{
+		Result: result,
+	}
+
+	return res, nil
 }
 
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
@@ -108,8 +130,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
+	certFile := "ssl/server.crt"
+	keyFile := "ssl/server.pem"
 
-	s := grpc.NewServer()
+	creed, sslErr := credentials.NewClientTLSFromFile(certFile, keyFile)
+	if sslErr != nil {
+		log.Fatalf("Failed loading certificates %v", sslErr)
+		return
+	}
+
+	s := grpc.NewServer(grpc.Creds(creed), grpc.KeepaliveParams(keepalive.ServerParameters{
+		MaxConnectionIdle: 5 * time.Minute,
+	}))
+
+	reflection.Register(s)
 
 	greetpb.RegisterGreetServiceServer(s, &server{})
 

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"io"
 	"log"
@@ -102,7 +103,6 @@ func (*server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) err
 			log.Fatalf("Error while making request: %v", err)
 		}
 		number := request.GetNum()
-		fmt.Println(number)
 		if number > max {
 			max = number
 			sendErr := stream.Send(&calculatorpb.FindMaximumResponse{Result: max})
@@ -175,6 +175,9 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", *http2Port),
 		Handler: http.HandlerFunc(handler),
 	}
+
+	reflection.Register(grpcServer)
+
 
 	go func() {
 		fmt.Println("Run http:1.1 server")
