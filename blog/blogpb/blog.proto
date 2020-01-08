@@ -38,16 +38,68 @@ message ReadAllBlogResponse {
     repeated Blog blog = 1;
 }
 
+message UpdateBlogRequest {
+    string blog_id = 1;
+    Blog blog = 2;
+}
+
+message UpdateBlogResponse {
+    Blog blog = 1;
+}
+
+message DeleteBlogRequest {
+    string blog_id = 1;
+}
+
+message DeleteBlogResponse {
+    string blog_id = 1;
+}
+
+message ListBlogRequest {
+    string search = 1;
+    int32 page = 2;
+}
+
+message ListBlogResponse {
+    Blog blog = 1;
+}
+
 service BlogService {
     rpc CreateBlog (CreateBlogRequest) returns (CreateBlogResponse) {
+        option (google.api.http) = {
+              post: "/v1/blog/articles"
+              body: "blog"
+        };
     };
 
     rpc ReadBlog (ReadBlogRequest) returns (ReadBlogResponse) {
+        option (google.api.http) = {
+              get: "/v1/blog/articles/{blog_id}"
+        };
     }; // return notFound
 
     rpc ReadAllBlog (ReadAllBlogRequest) returns (ReadAllBlogResponse) {
         option (google.api.http) = {
-              get: "/v1/example/echo/{search}"
+              get: "/v1/blog/articles"
         };
     };
+
+    rpc UpdateBlog (UpdateBlogRequest) returns (UpdateBlogResponse) {
+        option (google.api.http) = {
+              post: "/v1/blog/articles/{blog_id}"
+              body: "blog"
+        };
+    }
+
+    rpc DeleteBlog (DeleteBlogRequest) returns (DeleteBlogResponse) {
+        option (google.api.http) = {
+              delete: "/v1/blog/articles/{blog_id}"
+        };
+    }
+
+    rpc ListBlog (ListBlogRequest) returns (stream ListBlogResponse) {
+        option (google.api.http) = {
+              get: "/v1/blog/articles-stream"
+        };
+    }
 }

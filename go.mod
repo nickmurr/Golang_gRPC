@@ -11,6 +11,7 @@ require (
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.12.1
 	github.com/improbable-eng/grpc-web v0.12.0
+	github.com/jhekasoft/insteadman3 v3.1.2+incompatible // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/rs/cors v1.7.0 // indirect

@@ -84,6 +84,77 @@ func (CrudServer) ReadBlog(ctx context.Context, req *blogpb.ReadBlogRequest) (*b
 	}, nil
 }
 
+func (CrudServer) UpdateBlog(ctx context.Context, req *blogpb.UpdateBlogRequest) (*blogpb.UpdateBlogResponse, error) {
+	fmt.Println("Update")
+
+	blog := req.GetBlog()
+
+	oid, err := primitive.ObjectIDFromHex(blog.GetId())
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse ID"),
+		)
+	}
+
+	// create an empty struct
+	data := &BlogItem{}
+	filter := bson.M{"_id": oid}
+
+	res := Collection.FindOne(context.Background(), filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Errorf(
+			codes.NotFound,
+			fmt.Sprintf("Cannot find blog with specified ID: %v", err),
+		)
+	}
+
+	// we update our internal struct
+	data.AuthorID = blog.GetAuthor()
+	data.Content = blog.GetContent()
+	data.Title = blog.GetTitle()
+
+	_, updateErr := Collection.ReplaceOne(context.Background(), filter, data)
+	if updateErr != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Cannot update object in MongoDB: %v", updateErr),
+		)
+	}
+
+	return &blogpb.UpdateBlogResponse{
+		Blog: dataToBlogPb(data),
+	}, nil
+}
+
+func (CrudServer) DeleteBlog(ctx context.Context, req *blogpb.DeleteBlogRequest) (*blogpb.DeleteBlogResponse, error) {
+	fmt.Println("Delete blog")
+	oid, err := primitive.ObjectIDFromHex(req.GetBlogId())
+	if err != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			fmt.Sprintf("Cannot parse ID"),
+		)
+	}
+	filter := bson.M{"_id": oid}
+
+	s, err := Collection.DeleteOne(context.Background(), filter)
+	if s.DeletedCount > 0 {
+		if err != nil {
+			log.Printf("Error while deleting blog: %v", err)
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				fmt.Sprintf("Cannot parse ID"),
+			)
+		}
+
+		return &blogpb.DeleteBlogResponse{
+			BlogId: req.GetBlogId(),
+		}, nil
+	}
+	return nil, nil
+}
+
 func (CrudServer) ReadAllBlog(ctx context.Context, req *blogpb.ReadAllBlogRequest) (*blogpb.ReadAllBlogResponse, error) {
 	blogPage := req.GetPage()
 	blogSearch := req.GetSearch()
@@ -130,6 +201,40 @@ func (CrudServer) ReadAllBlog(ctx context.Context, req *blogpb.ReadAllBlogReques
 	log.Println(data, countDocuments)
 
 	return &blogpb.ReadAllBlogResponse{Blog: data}, nil
+}
+
+func (CrudServer) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_ListBlogServer) error {
+	fmt.Println("List blog stream")
+	cursor, err := Collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		return status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Uknown internal error: %v", err),
+		)
+	}
+
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		data := &BlogItem{}
+		err := cursor.Decode(data)
+		if err != nil {
+			return status.Errorf(
+				codes.Internal,
+				fmt.Sprintf("Error while decoding data from db error: %v", err),
+			)
+		}
+		_ = stream.Send(&blogpb.ListBlogResponse{Blog: dataToBlogPb(data)})
+	}
+
+	if err := cursor.Err(); err != nil {
+		return status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Error while decoding data from db error: %v", err),
+		)
+	}
+
+	return nil
 }
 
 func dataToBlogPb(data *BlogItem) *blogpb.Blog {

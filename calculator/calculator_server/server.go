@@ -87,8 +87,6 @@ func (*server) ComputeAverage(stream calculatorpb.SumService_ComputeAverageServe
 		index += 1
 		result += float32(req.Num)
 	}
-
-	return nil
 }
 
 func (*server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) error {
@@ -100,7 +98,10 @@ func (*server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) err
 			return nil
 		}
 		if err != nil {
-			log.Fatalf("Error while making request: %v", err)
+			grpclog.Errorf("Error while making request: %v", err)
+			return err
+			// break
+			// log.Fatalf("Error while making request: %v", err)
 		}
 		number := request.GetNum()
 		if number > max {
@@ -112,8 +113,6 @@ func (*server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) err
 			}
 		}
 	}
-
-	return nil
 }
 
 func (*server) SquareRoot(ctx context.Context, req *calculatorpb.SquareRootRequest) (*calculatorpb.SquareRootResponse, error) {

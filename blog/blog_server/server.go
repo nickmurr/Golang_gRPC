@@ -88,13 +88,13 @@ func main() {
 	}
 
 	reflection.Register(grpcServer)
-
-	go func() {
-		fmt.Println("Run http:1.1 server")
-		if err := http1Server.ListenAndServe(); err != nil {
-			grpclog.Fatalf("failed starting http1.1 server: %v", err)
-		}
-	}()
+	//
+	// go func() {
+	// 	fmt.Println("Run http:1.1 server")
+	// 	if err := http1Server.ListenAndServe(); err != nil {
+	// 		grpclog.Fatalf("failed starting http1.1 server: %v", err)
+	// 	}
+	// }()
 
 	go func() {
 		fmt.Println("Run http:2.0 server")

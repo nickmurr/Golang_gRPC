@@ -23,8 +23,8 @@ func main() {
 	c := blogpb.NewBlogServiceClient(cc)
 
 	// createBlogItem(c)
-	// readBlogItem(c)
-	readAllBlogItem(c)
+	readBlogItem(c)
+	// readAllBlogItem(c)
 }
 
 func createBlogItem(c blogpb.BlogServiceClient) {
@@ -55,7 +55,7 @@ func readBlogItem(c blogpb.BlogServiceClient) {
 	fmt.Println("Start Read blog")
 
 	req := &blogpb.ReadBlogRequest{
-		BlogId: "5e0e7311a275e780cdd7ba85",
+		BlogId: "5e0f7406cc2d0849f1e08575",
 	}
 
 	res, err := c.ReadBlog(context.Background(), req)
